@@ -2,7 +2,7 @@ langchain
 langchain-google-genai
 langchain-community
 faiss-cpu
-PyPDF2
+pypdf
 python-dotenv
 google-generativeai
 flask
