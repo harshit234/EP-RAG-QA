@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI-Powered Document Q&A</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <span class="logo-icon">📄</span>
+            <span>Gen AI-Powered Document QnA</span>
+        </div>
+        <button class="about-btn" onclick="showAbout()">About Me</button>
+    </header>
+
+    <div class="container">
+        <!-- Left Section: Upload -->
+        <div class="upload-section">
+            <h2 class="section-title">📤 Upload Document</h2>
+            <div class="upload-box">
+                <input type="file" id="fileInput" accept=".pdf" />
+                <label for="fileInput" class="file-label">Choose File</label>
+                <div id="fileName" class="file-name"></div>
+                <button class="upload-btn" id="uploadBtn" onclick="uploadPDF()" disabled>
+                    Upload PDF
+                </button>
+            </div>
+            <div id="uploadMessage"></div>
+        </div>
+
+        <!-- Right Section: Q&A -->
+        <div class="qa-section">
+            <h2 class="section-title">💬 Ask a Question</h2>
+            <div class="qa-box">
+                <div class="question-input-group">
+                    <input type="text" id="questionInput" placeholder="Enter your question" disabled />
+                    <button class="ask-btn" id="askBtn" onclick="askQuestion()" disabled>
+                        Ask Question
+                    </button>
+                </div>
+
+                <div id="answerContainer" class="answer-container">
+                    <div class="answer-label">Answer</div>
+                    <div class="answer-text" id="answerText"></div>
+                    <div class="sources-section">
+                        <div class="sources-title">📚 Sources Used</div>
+                        <div id="sourcesList"></div>
+                    </div>
+                </div>
+
+                <div id="responseMessage"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center;">
+        <div style="background:#1a1a2e; padding:40px; border-radius:12px; max-width:500px; color:white;">
+            <h2>About This Project</h2>
+            <p style="margin-top:15px; line-height:1.6;">
+                A Retrieval-Augmented Generation (RAG) chatbot that answers questions about PDF documents.
+            </p>
+            <p style="margin-top:10px;">
+                <strong>Built with:</strong> LangChain, FAISS, Google Gemini API, Flask
+            </p>
+            <button onclick="closeAbout()"
+                style="background:#00d4ff; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; margin-top:20px;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // File upload handler
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const fileName = this.files[0]?.name;
+            const fileNameDiv = document.getElementById('fileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (fileName) {
+                fileNameDiv.textContent = `Selected: ${fileName}`;
+                uploadBtn.disabled = false;
+            } else {
+                fileNameDiv.textContent = '';
+                uploadBtn.disabled = true;
+            }
+        });
+
+        function uploadPDF() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('Please select a PDF file', 'error', 'uploadMessage');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner"></span>Processing...';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('✅ PDF processed successfully!', 'success', 'uploadMessage');
+                        document.getElementById('questionInput').disabled = false;
+                        document.getElementById('askBtn').disabled = false;
+                    } else {
+                        showMessage('❌ Error: ' + data.message, 'error', 'uploadMessage');
+                    }
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = 'Upload PDF';
+                })
+                .catch(error => {
+                    showMessage('❌ Error uploading file: ' + error, 'error', 'uploadMessage');
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = 'Upload PDF';
+                });
+        }
+
+        function askQuestion() {
+            const question = document.getElementById('questionInput').value.trim();
+
+            if (!question) {
+                showMessage('Please enter a question', 'error', 'responseMessage');
+                return;
+            }
+
+            const askBtn = document.getElementById('askBtn');
+            askBtn.disabled = true;
+            askBtn.innerHTML = '<span class="spinner"></span>Searching...';
+
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayAnswer(data.answer, data.sources);
+                        document.getElementById('responseMessage').innerHTML = '';
+                    } else {
+                        showMessage('❌ Error: ' + data.message, 'error', 'responseMessage');
+                    }
+                    askBtn.disabled = false;
+                    askBtn.innerHTML = 'Ask Question';
+                })
+                .catch(error => {
+                    showMessage('❌ Error: ' + error, 'error', 'responseMessage');
+                    askBtn.disabled = false;
+                    askBtn.innerHTML = 'Ask Question';
+                });
+        }
+
+        function displayAnswer(answer, sources) {
+            document.getElementById('answerText').textContent = answer;
+
+            const sourcesList = document.getElementById('sourcesList');
+            sourcesList.innerHTML = '';
+
+            sources.forEach((source, index) => {
+                const sourceDiv = document.createElement('div');
+                sourceDiv.className = 'source';
+                sourceDiv.innerHTML = `<strong>Source ${index + 1}:</strong> ${source.slice(0, 200)}...`;
+                sourcesList.appendChild(sourceDiv);
+            });
+
+            document.getElementById('answerContainer').classList.add('show');
+        }
+
+        function showMessage(message, type, elementId) {
+            const messageDiv = document.getElementById(elementId);
+            messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
+        }
+
+        function showAbout() {
+            document.getElementById('aboutModal').style.display = 'flex';
+        }
+
+        function closeAbout() {
+            document.getElementById('aboutModal').style.display = 'none';
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('aboutModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Allow Enter key to ask question
+        document.getElementById('questionInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !document.getElementById('askBtn').disabled) {
+                askQuestion();
+            }
+        });
+    </script>
+</body>
+
+</html>
