@@ -138,6 +138,16 @@ def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok'}), 200
 
+@app.route('/debug-env', methods=['GET'])
+def debug_env():
+    """Debug endpoint to check if API key is loaded"""
+    key = os.getenv("GOOGLE_API_KEY")
+    return jsonify({
+        'GOOGLE_API_KEY_found': key is not None,
+        'GOOGLE_API_KEY_preview': f"{key[:10]}...{key[-4:]}" if key else "NOT SET",
+        'all_env_keys': [k for k in os.environ.keys() if 'GOOGLE' in k or 'GEMINI' in k or 'API' in k]
+    }), 200
+
 if __name__ == '__main__':
     # Run Flask app
     print("🚀 Starting RAG Document Q&A Bot...")
