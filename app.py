@@ -150,6 +150,6 @@ def debug_env():
 
 if __name__ == '__main__':
     # Run Flask app
-    print("🚀 Starting RAG Document Q&A Bot...")
-    print("📍 Open http://localhost:5000 in your browser")
+    print("[*] Starting RAG Document Q&A Bot...")
+    print("[*] Open http://localhost:5000 in your browser")
     app.run(debug=True, host='0.0.0.0', port=5000)
