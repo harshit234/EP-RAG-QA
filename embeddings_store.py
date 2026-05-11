@@ -64,8 +64,7 @@ def create_embeddings_and_store(pdf_path, store_name="faiss_index"):
     print(f"Loaded {len(chunks)} chunks from PDF")
 
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
-        google_api_key=os.getenv("GOOGLE_API_KEY")
+        model="models/gemini-embedding-001"
     )
     print("Embeddings model initialized — starting embedding with retry logic …")
 
@@ -81,8 +80,7 @@ def create_embeddings_and_store(pdf_path, store_name="faiss_index"):
 
 def load_existing_store(store_name="faiss_index"):
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
-        google_api_key=os.getenv("GOOGLE_API_KEY")
+        model="models/gemini-embedding-001"
     )
     vector_store = FAISS.load_local(
         store_name,
